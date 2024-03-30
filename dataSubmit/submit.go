@@ -1,4 +1,4 @@
-package main
+package submit
 
 import (
 	// "avail-gsrpc-examples/internal/config"
