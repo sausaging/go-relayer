@@ -1,4 +1,4 @@
-package main
+package submit
 
 import (
 	// "avail-gsrpc-examples/internal/config"
@@ -9,27 +9,42 @@ import (
 	"log"
 	"os"
 	"time"
+	"config"
 
 	"github.com/ava-labs/hypersdk/rpc"
 	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
-	config "github.com/sausaging/go-relayer/internal"
 
 	lrpc "github.com/sausaging/hyper-pvzk/rpc"
 )
 
-type Block struct {
-	Data []byte
-}
-
 // submitData creates a transaction and makes a Avail data submission
-func submitData(data []byte, ApiURL string, Seed string, appID int, meta *types.Metadata, api *gsrpc.SubstrateAPI) error {
+func submitData(data []byte, ApiURL string, Seed string, appID int, meta *types.Metadata, api *gsrpc.SubstrateAPI, nonce uint32) error {
+	// api, err := gsrpc.NewSubstrateAPI(ApiURL)
+	// if err != nil {
+	// 	return fmt.Errorf("cannot create api:%w", err)
+	// }
+
+	// meta, err := api.RPC.State.GetMetadataLatest()
+	// if err != nil {
+	// 	return fmt.Errorf("cannot get metadata:%w", err)
+	// }
+
+	// // Set data and appID according to need
+	// appID := 0
+
+	// // if app id is greater than 0 then it must be created before submitting data
+	// if AppID != 0 {
+	// 	appID = AppID
+	// }
+
 	c, err := types.NewCall(meta, "DataAvailability.submit_data", types.NewBytes(data))
 	if err != nil {
 		return fmt.Errorf("cannot create new call:%w", err)
 	}
 
+	// Create the extrinsic
 	ext := types.NewExtrinsic(c)
 
 	genesisHash, err := api.RPC.Chain.GetBlockHash(0)
@@ -58,7 +73,7 @@ func submitData(data []byte, ApiURL string, Seed string, appID int, meta *types.
 		return fmt.Errorf("cannot get latest storage:%w", err)
 	}
 
-	nonce := uint32(accountInfo.Nonce)
+	// nonce := uint32(accountInfo.Nonce)
 	o := types.SignatureOptions{
 		BlockHash:          genesisHash,
 		Era:                types.ExtrinsicEra{IsMortalEra: false},
@@ -70,11 +85,13 @@ func submitData(data []byte, ApiURL string, Seed string, appID int, meta *types.
 		TransactionVersion: rv.TransactionVersion,
 	}
 
+	// Sign the transaction using Alice's default account
 	err = ext.Sign(keyringPair, o)
 	if err != nil {
 		return fmt.Errorf("cannot sign:%w", err)
 	}
 
+	// Send the extrinsic
 	hash, err := api.RPC.Author.SubmitExtrinsic(ext)
 	if err != nil {
 		return fmt.Errorf("cannot submit extrinsic:%w", err)
@@ -86,35 +103,36 @@ func submitData(data []byte, ApiURL string, Seed string, appID int, meta *types.
 
 func main() {
 	var configJSON string
+	node_url :=
+		"http://127.0.0.1:36477/ext/bc/k57dGnG6YUyuNiCLEBcgvaoq9NC9phzPfZmH1xGfyQ9ftsKo8"
 	var client *rpc.WebSocketClient
 	var config config.Config
 	flag.StringVar(&configJSON, "config", "", "config json file")
 	flag.Parse()
-	if configJSON == "" {
-		log.Println("No config file provided. Exiting...")
-		os.Exit(0)
-	}
-	err := config.GetConfig(configJSON)
-
-	if err != nil {
-		panic(fmt.Sprintf("cannot get config:%v", err))
-	}
-	nodeUrl := config.NodeURL
-	jsonClient := rpc.NewJSONRPCClient(nodeUrl)
+	jsonClient := rpc.NewJSONRPCClient(node_url)
 	network, _, chainId, err := jsonClient.Network(context.TODO())
 	if err != nil {
 		log.Println("cannot get network: %v", err)
 		os.Exit(0)
 	}
-	lcli := lrpc.NewJSONRPCClient(nodeUrl, network, chainId)
+	lcli := lrpc.NewJSONRPCClient(node_url, network, chainId)
 	parser, err := lcli.Parser(context.TODO())
 	if err != nil {
 		log.Println("cannot create parser")
 		os.Exit(0)
 	}
+	if configJSON == "" {
+		log.Println("No config file provided. Exiting...")
+		os.Exit(0)
+	}
+
+	err = config.GetConfig(configJSON)
+	if err != nil {
+		panic(fmt.Sprintf("cannot get config:%v", err))
+	}
 
 	// Create a new Hyperspace client
-	client, err = rpc.NewWebSocketClient(nodeUrl, 10*time.Second, 10, 1024*1024)
+	client, err = rpc.NewWebSocketClient(node_url, 10*time.Second, 10, 1024*1024)
 	if err != nil {
 		panic(fmt.Sprintf("cannot create client:%v", err))
 	}
@@ -134,15 +152,15 @@ func main() {
 		panic(fmt.Sprintf("cannot get metadata:%v", err))
 	}
 
+	// Set data and appID according to need
 	appID := 0
 
 	AppID := config.AppID
-
+	// if app id is greater than 0 then it must be created before submitting data
 	if AppID != 0 {
 		appID = AppID
 	}
 	nonce := uint32(1532)
-	var blockList []Block
 	for {
 		block, _, _, err := client.ListenBlock(context.TODO(), parser)
 		if err != nil {
@@ -155,24 +173,13 @@ func main() {
 			continue
 		}
 
-		// Append the block data to the blockList
-		blockList = append(blockList, Block{Data: blockData})
-
-		if len(blockList) == 4 {
-			aggregateBlockData, err := aggregateBlockData(blockList)
-			if err != nil {
-				log.Printf("Error aggregating block data: %v\n", err)
-				continue
-			}
-			err = submitData(aggregateBlockData, config.ApiURL, config.Seed, appID, meta, api)
-			if err != nil {
-				log.Printf("Error submitting proof: %v\n", err)
-			} else {
-				log.Println("Successfully submitted proof for block:", block.Hght)
-				nonce++
-			}
-			// Clear the blockList
-			blockList = []Block{}
+		// Call your submitProof function with the block data
+		err = submitData(blockData, config.ApiURL, config.Seed, appID, meta, api, nonce)
+		if err != nil {
+			log.Printf("Error submitting proof: %v\n", err)
+		} else {
+			log.Println("Successfully submitted proof for block:", block.Hght)
+			nonce++
 		}
 	}
 	err = client.Close()
@@ -180,20 +187,3 @@ func main() {
 		log.Printf("Error closing WebSocket client: %v\n", err)
 	}
 }
-
-func aggregateBlockData(data []Block) ([]byte, error) {
-	// Option 1: Concatenation
-	var allBytes []byte
-	for _, block := range data {
-	  allBytes = append(allBytes, block.Data...)
-	}
-	return allBytes, nil
-  
-	// Option 2: Custom logic (e.g., extract specific fields and combine)
-	// Implement your logic here based on what you want to achieve
-	// ...
-  
-	// Option 3: Use third-party libraries (consider performance implications)
-	// You could explore libraries like "bytesutil" for more advanced operations
-	// ...
-  }
