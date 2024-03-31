@@ -1,8 +1,6 @@
 package main
 
 import (
-	// "avail-gsrpc-examples/internal/config"
-	// "avail-gsrpc-examples/internal/extrinsics"
 	"context"
 	"flag"
 	"fmt"
@@ -155,7 +153,6 @@ func main() {
 			continue
 		}
 
-		// Append the block data to the blockList
 		blockList = append(blockList, Block{Data: blockData})
 
 		if len(blockList) == 4 {
@@ -171,7 +168,6 @@ func main() {
 				log.Println("Successfully submitted proof for block:", block.Hght)
 				nonce++
 			}
-			// Clear the blockList
 			blockList = []Block{}
 		}
 	}
@@ -182,18 +178,11 @@ func main() {
 }
 
 func aggregateBlockData(data []Block) ([]byte, error) {
-	// Option 1: Concatenation
 	var allBytes []byte
 	for _, block := range data {
 	  allBytes = append(allBytes, block.Data...)
+	  // combine with a series of 0's to separate the blocks
+	  allBytes = append(allBytes, []byte{0, 0, 0, 0, 0 , 0}...)
 	}
 	return allBytes, nil
-  
-	// Option 2: Custom logic (e.g., extract specific fields and combine)
-	// Implement your logic here based on what you want to achieve
-	// ...
-  
-	// Option 3: Use third-party libraries (consider performance implications)
-	// You could explore libraries like "bytesutil" for more advanced operations
-	// ...
   }
