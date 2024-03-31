@@ -2,8 +2,9 @@
     "seed":"SEED_PHRASE",
     "api_url":"wss://goldberg.avail.tools/ws",
     "size":1000,
-    "app_id" : 4820,
+    "app_id" : "YOUR_APP_ID_HERE(INT)",
     "dest" : "5H3qehpRTFiB3XwyTzYU43SpG7e8jW87vFug95fxdew76Vyi",
     "amount" : 1,
-    "node_url": "RPC_NODE_URL"
+    "node_url": "RPC_NODE_URL",
+    "block_batch_size": 5
   }

@@ -14,6 +14,7 @@ type Config struct {
 	Dest   string `json:"dest"`
 	Amount uint64 `json:"amount"`
 	NodeURL string `json:"node_url"`
+	BlockBatchSize int `json:"block_batch_size"`
 }
 
 func (c *Config) GetConfig(configFileName string) error {

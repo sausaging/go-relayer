@@ -155,7 +155,7 @@ func main() {
 
 		blockList = append(blockList, Block{Data: blockData})
 
-		if len(blockList) == 4 {
+		if len(blockList) == config.BlockBatchSize {
 			aggregateBlockData, err := aggregateBlockData(blockList)
 			if err != nil {
 				log.Printf("Error aggregating block data: %v\n", err)
