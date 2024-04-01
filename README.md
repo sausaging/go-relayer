@@ -5,7 +5,7 @@ Listens to blocks at the quark layer and submits data to the Avail DA
 
 ### Prerequisites
 
-To run the go relayer, make sure you spin up the quark layer and the sausage server on your local sysytem, to do so you can follow the instructions [here]([https://github.com/sausaging](https://github.com/sausaging#mvp-quick-start))
+To run the go relayer, make sure you spin up the quark layer and the sausage server on your local sytem, to do so you can follow the instructions [here]([https://github.com/sausaging](https://github.com/sausaging#mvp-quick-start))
 
 ### Build Steps
 
